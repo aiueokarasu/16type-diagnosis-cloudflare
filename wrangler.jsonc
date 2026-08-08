@@ -1,14 +1,11 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "16type-diagnosis",
-  "main": "./worker/index.ts",
   "compatibility_date": "2026-08-08",
-  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
   "assets": {
-    "binding": "ASSETS",
-    "run_worker_first": true
-  },
-  "observability": {
-    "enabled": true
+    "directory": "./dist",
+    "html_handling": "none",
+    "not_found_handling": "404-page"
   }
 }
