@@ -8,13 +8,14 @@ const CHOICE_LABELS = [
   "そう思う",
 ];
 const CHOICE_SCORES = [-2, -1, 0, 1, 2];
+const DIAGNOSIS_DATA_VERSION = "20260811-five-point";
 
 let questions = [];
 let index = 0;
 const answers = [];
 const $ = (id) => document.getElementById(id);
 
-fetch("data/questions.json")
+fetch(`data/questions.json?v=${DIAGNOSIS_DATA_VERSION}`)
   .then((response) => response.json())
   .then((data) => {
     questions = data;
