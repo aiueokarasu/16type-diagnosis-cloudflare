@@ -2,7 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "type-navi-console",
   "main": "./src/admin-worker.js",
-  "compatibility_date": "2026-08-11",
+  "compatibility_date": "2026-08-10",
   "workers_dev": true,
   "d1_databases": [
     {
