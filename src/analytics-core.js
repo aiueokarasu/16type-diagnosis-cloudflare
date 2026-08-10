@@ -1,3 +1,4 @@
+
 export const ANALYTICS_EVENTS = new Set([
   "visit",
   "heartbeat",
@@ -42,19 +43,19 @@ export function normalizeAnalyticsPayload(input) {
   return payload;
 }
 
-export function normalizeDateRange(searchParams, now = new Date()) {
+export function normalizeDateRange(searchParams, now = new Date(), earliestDate = null) {
   const preset = searchParams.get("range") || "7d";
   const endDate = formatJapanDate(now);
   let startDate;
 
   if (preset === "today") startDate = endDate;
   else if (preset === "30d") startDate = shiftDate(endDate, -29);
-  else if (preset === "all") startDate = shiftDate(endDate, -89);
+  else if (preset === "all") startDate = validDate(earliestDate) ? earliestDate : shiftDate(endDate, -89);
   else if (preset === "custom") {
     startDate = validDate(searchParams.get("start")) ? searchParams.get("start") : endDate;
     const requestedEnd = validDate(searchParams.get("end")) ? searchParams.get("end") : endDate;
     const ordered = orderRange(startDate, requestedEnd);
-    return { startDate: ordered.startDate < shiftDate(ordered.endDate, -89) ? shiftDate(ordered.endDate, -89) : ordered.startDate, endDate: ordered.endDate };
+    return ordered;
   } else startDate = shiftDate(endDate, -6);
 
   return { startDate, endDate };
@@ -100,3 +101,4 @@ function shiftDate(value, days) {
 function orderRange(startDate, endDate) {
   return startDate <= endDate ? { startDate, endDate } : { startDate: endDate, endDate: startDate };
 }
+
