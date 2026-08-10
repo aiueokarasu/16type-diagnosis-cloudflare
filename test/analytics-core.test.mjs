@@ -37,6 +37,7 @@ test("caps custom ranges to the 90-day retention period", () => {
 
 test("password records verify only the correct password and pepper", async () => {
   const record = await createPasswordRecord("correct-horse-battery-staple", "test-pepper");
+  assert.equal(record.iterations, 100_000);
   const user = {
     password_salt: record.salt,
     password_hash: record.hash,
