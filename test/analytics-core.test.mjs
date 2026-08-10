@@ -92,6 +92,9 @@ test("diagnosis questions use balanced five-point statements", () => {
     assert.match(diagnosisSource, new RegExp(label));
   }
   assert.match(diagnosisSource, /CHOICE_SCORES = \[-2, -1, 0, 1, 2\]/);
+  assert.match(diagnosisSource, /questions\.json\?v=/);
+  const diagnosisHtml = readFileSync(new URL("../site/diagnosis.html", import.meta.url), "utf8");
+  assert.match(diagnosisHtml, /diagnosis\.js\?v=20260811-five-point/);
 });
 
 test("password records verify only the correct password and pepper", async () => {
