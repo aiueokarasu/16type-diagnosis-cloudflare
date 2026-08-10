@@ -1,17 +1,17 @@
 name: CI
 
 on:
-  pull_request:
   push:
     branches: [main]
+  pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -22,6 +22,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run build
-      - name: Verify Cloudflare deployment bundle
-        run: pnpm exec wrangler deploy --dry-run
+      - run: pnpm run check
+      - run: pnpm exec wrangler deploy --dry-run
+      - run: pnpm exec wrangler deploy --config wrangler.admin.jsonc --dry-run

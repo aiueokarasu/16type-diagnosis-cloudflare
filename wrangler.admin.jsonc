@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "type-navi-console",
+  "main": "./src/admin-worker.js",
+  "compatibility_date": "2026-08-10",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "ANALYTICS_DB",
+      "database_name": "type-navi-analytics",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "triggers": {
+    "crons": ["0 18 * * *"]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}
