@@ -1,3 +1,4 @@
+
 import { createServer } from "node:http";
 import { dashboardPage, loginPage, setupPage } from "../src/admin/pages.js";
 
@@ -8,7 +9,7 @@ const server = createServer((request, response) => {
     const route = url.pathname.split("/").at(-1);
     const headers = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" };
     if (route === "session") return sendJson(response, { csrfToken: "preview", user: { id: 1, username: "preview-owner" } }, headers);
-    if (route === "admins") return sendJson(response, { admins: [{ id: 1, username: "preview-owner", active: true, lastLoginAt: new Date().toISOString() }, { id: 2, username: "preview-partner", active: true, lastLoginAt: null }] }, headers);
+    if (route === "admins") return sendJson(response, { admins: [{ id: 1, username: "preview-owner", active: true, lastLoginAt: new Date().toISOString() }] }, headers);
     if (route === "metrics") return sendJson(response, previewMetrics(), headers);
     return sendJson(response, { message: "プレビュー操作を確認しました。" }, headers);
   }
@@ -42,3 +43,4 @@ function previewMetrics() {
 server.listen(port, "127.0.0.1", () => {
   console.log(`Admin preview available at http://127.0.0.1:${port}/`);
 });
+
