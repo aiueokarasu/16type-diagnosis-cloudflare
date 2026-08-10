@@ -9,6 +9,7 @@ body.dark .compatibility{background:linear-gradient(135deg,#45352a,#3b2c39);bord
 .result-main{max-width:920px}
 /* Article cover shown inside the diagnosis-type card. */
 .result-hero-image{display:block;width:min(100%,680px);height:auto;object-fit:contain;margin:0 auto 26px;border-radius:16px;box-shadow:0 9px 22px #5e486a20}
+.result-hero{background:transparent;border-radius:0;padding:0}body.dark .result-hero{background:transparent}
 body.dark .compatibility>h2{color:#fff4d6}body.dark .compatibility li:nth-child(2){background:#747b85;color:#f7f8fa}body.dark .compatibility li:nth-child(3){background:#7a5239;color:#ffe8cf}
 .advice span{display:inline-flex;align-items:center;padding:5px 11px;border-radius:999px;background:#f8bfd0;color:#423c62;font-size:12px;font-weight:800;letter-spacing:.12em;box-shadow:0 3px 10px #0002}.advice p{padding:8px 0}
 .result-hero .type-code,.result-hero h1,.result-hero .catchcopy{display:none}.result-hero .rating{margin-top:0;font-size:18px;font-weight:700;gap:28px}.result-hero .rating b{font-size:20px;letter-spacing:.06em}@media(max-width:560px){.result-hero .rating{font-size:16px;gap:16px}.result-hero .rating b{font-size:18px}}
