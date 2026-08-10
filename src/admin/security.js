@@ -1,7 +1,9 @@
+
 const encoder = new TextEncoder();
 const SESSION_COOKIE = "tn_console_session";
 const SESSION_SECONDS = 8 * 60 * 60;
-export const PASSWORD_ITERATIONS = 210_000;
+// Cloudflare Workers Web Crypto accepts PBKDF2 iteration counts up to 100,000.
+export const PASSWORD_ITERATIONS = 100_000;
 
 export function normalizeUsername(value) {
   const username = String(value || "").trim().toLowerCase();
@@ -153,3 +155,4 @@ function readCookie(header, name) {
   }
   return null;
 }
+
