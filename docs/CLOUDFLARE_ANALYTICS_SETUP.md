@@ -1,3 +1,4 @@
+
 # Cloudflare アクセス解析・管理画面セットアップ
 
 このプロジェクトは、1つのGitHubリポジトリから2つのWorkerをデプロイします。
@@ -51,17 +52,18 @@ Cloudflare Dashboardから `type-navi-analytics` に `migrations/0001_analytics_
 
 Secretの値はGitHub、Wrangler設定、ビルドログ、URL、この文書のいずれにも記録しません。
 
-## 2名の初期管理者を登録する
+## 2名の管理者を1名ずつ登録する
 
 1. D1マイグレーションが完了していることを確認します。
 2. 管理Workerへ上記3つのSecretを登録します。
 3. `https://type-navi-console.type-navi-jp.workers.dev/<ADMIN_PATH>/setup` を開きます。
-4. `ADMIN_SETUP_TOKEN` と、2名それぞれ異なる管理者名・パスワードを入力します。
-5. パスワードは12文字以上にし、パスワード管理アプリで生成した値を推奨します。
-6. 登録成功後、管理Workerから `ADMIN_SETUP_TOKEN` Secretを削除します。
-7. `https://type-navi-console.type-navi-jp.workers.dev/<ADMIN_PATH>` で2名が別々にログインできることを確認します。
+4. `ADMIN_SETUP_TOKEN` と、1人目の管理者名・パスワードを入力します。
+5. 1人目でログインし、「管理者アカウント」欄から2人目の管理者名・初期パスワードを登録します。
+6. それぞれのパスワードは12文字以上にし、パスワード管理アプリで生成した異なる値を推奨します。
+7. 2人目の登録成功後、管理Workerから `ADMIN_SETUP_TOKEN` Secretを削除します。
+8. `https://type-navi-console.type-navi-jp.workers.dev/<ADMIN_PATH>` で2名が別々にログインできることを確認します。
 
-初期登録APIは管理者が1名でも存在すれば再実行を拒否し、データベースも3人目の登録を拒否します。パスワードは `AUTH_PEPPER` と個別saltを組み合わせたPBKDF2-SHA-256ハッシュだけを保存します。
+初期登録APIは管理者が1名でも存在すれば再実行を拒否します。2人目の追加APIはログインとCSRF検証を必須とし、データベースも3人目の登録を拒否します。パスワードは `AUTH_PEPPER` と個別saltを組み合わせたPBKDF2-SHA-256ハッシュだけを保存します。
 
 ## 管理者のブラウザを本番集計から除外する
 
@@ -89,3 +91,4 @@ IPアドレス、氏名、メールアドレス、生のブラウザ識別子は
 2つのWorkerを同じGitHubリポジトリへ接続すると、`main` へのPushでそれぞれ独立したCloudflareビルドが始まります。公開Workerは `wrangler.jsonc`、管理Workerは `wrangler.admin.jsonc` を使用します。
 
 GitHub CIではCloudflareへ反映する前に、両WorkerのビルドとWrangler dry-runを確認します。
+
