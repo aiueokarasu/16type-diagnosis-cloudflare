@@ -1,7 +1,10 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 import { japanDateBounds, normalizeAnalyticsPayload, normalizeDateRange } from "../src/analytics-core.js";
+import { archiveStatements, detailCutoffIso } from "../src/admin-worker.js";
 import { createPasswordRecord, verifyPassword } from "../src/admin/security.js";
 import { dashboardPage, setupPage } from "../src/admin/pages.js";
 
@@ -30,9 +33,47 @@ test("creates Japan-time bounds for a custom range", () => {
   });
 });
 
-test("caps custom ranges to the 90-day retention period", () => {
+test("allows custom ranges older than the 90-day detail retention period", () => {
   const range = normalizeDateRange(new URLSearchParams("range=custom&start=2026-01-01&end=2026-08-03"));
-  assert.deepEqual(range, { startDate: "2026-05-06", endDate: "2026-08-03" });
+  assert.deepEqual(range, { startDate: "2026-01-01", endDate: "2026-08-03" });
+});
+
+test("uses the earliest daily rollup for the all-time range", () => {
+  const range = normalizeDateRange(new URLSearchParams("range=all"), new Date("2026-08-03T12:00:00Z"), "2024-04-12");
+  assert.deepEqual(range, { startDate: "2024-04-12", endDate: "2026-08-03" });
+});
+
+test("retention archives old details before deleting them", () => {
+  const database = new DatabaseSync(":memory:");
+  database.exec(readFileSync(new URL("../migrations/0001_analytics_and_admin.sql", import.meta.url), "utf8"));
+  database.exec(readFileSync(new URL("../migrations/0002_indefinite_daily_rollups.sql", import.meta.url), "utf8"));
+  const insert = database.prepare(`INSERT INTO analytics_sessions (
+    session_id, visitor_id, started_at, last_seen_at, entry_path, active_seconds, answers_count,
+    answer_started_at, completed_at, result_viewed_at, result_type, note_clicked_at, note_type
+  ) VALUES (?, ?, ?, ?, '/', ?, ?, ?, ?, ?, ?, ?, ?)`);
+  insert.run("old-session", "old-visitor", "2026-01-02T01:00:00.000Z", "2026-01-02T01:03:00.000Z", 120, 7,
+    "2026-01-02T01:01:00.000Z", "2026-01-02T01:02:00.000Z", "2026-01-02T01:02:30.000Z", "ENFP",
+    "2026-01-02T01:03:00.000Z", "ENFP");
+  insert.run("recent-session", "recent-visitor", "2026-08-02T01:00:00.000Z", "2026-08-02T01:03:00.000Z", 60, 2,
+    null, null, null, null, null, null);
+
+  const env = { ANALYTICS_DB: { prepare(sql) { return { sql, bind(...args) { this.args = args; return this; } }; } } };
+  for (const statement of archiveStatements(env, "2026-05-01T15:00:00.000Z", "2026-08-03T00:00:00.000Z")) {
+    database.prepare(statement.sql).run(...(statement.args || []));
+  }
+
+  assert.equal(database.prepare("SELECT COUNT(*) AS count FROM analytics_sessions").get().count, 1);
+  assert.deepEqual({ ...database.prepare("SELECT visitors, visits, active_seconds_total, active_sessions, answers, started, completed, result_views, note_clicks FROM analytics_daily WHERE day = '2026-01-02'").get() }, {
+    visitors: 1, visits: 1, active_seconds_total: 120, active_sessions: 1, answers: 7,
+    started: 1, completed: 1, result_views: 1, note_clicks: 1,
+  });
+  assert.deepEqual({ ...database.prepare("SELECT type, completed, note_clicks FROM analytics_daily_types WHERE day = '2026-01-02'").get() }, {
+    type: "ENFP", completed: 1, note_clicks: 1,
+  });
+});
+
+test("detail retention keeps 90 Japan calendar days", () => {
+  assert.equal(detailCutoffIso(new Date("2026-08-11T03:00:00+09:00")), "2026-05-13T15:00:00.000Z");
 });
 
 test("password records verify only the correct password and pepper", async () => {
