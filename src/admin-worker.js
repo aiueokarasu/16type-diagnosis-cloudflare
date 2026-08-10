@@ -1,3 +1,4 @@
+
 import { dashboardPage, loginPage, setupPage } from "./admin/pages.js";
 import {
   createAdminSession,
@@ -81,6 +82,7 @@ async function handleApi(request, env, basePath) {
   }
   if (route === "metrics" && request.method === "GET") return metrics(url, env);
   if (route === "admins" && request.method === "GET") return admins(env);
+  if (route === "admins/create" && request.method === "POST") return createAdmin(request, env);
   if (route === "admins/status" && request.method === "POST") return updateAdminStatus(request, env, session);
   if (route === "password" && request.method === "POST") return changePassword(request, env, session);
   return secureJson({ message: "Not found" }, 404);
@@ -138,22 +140,15 @@ async function setup(request, env) {
   if (!body || !await setupTokenMatches(body.setupToken, env.ADMIN_SETUP_TOKEN)) {
     return secureJson({ message: "セットアップトークンが正しくありません。" }, 403);
   }
-  const username1 = normalizeUsername(body.username1);
-  const username2 = normalizeUsername(body.username2);
-  if (!username1 || !username2 || username1 === username2 || !validPassword(body.password1) || !validPassword(body.password2)) {
-    return secureJson({ message: "2名分の異なる管理者名と、12文字以上のパスワードを入力してください。" }, 400);
+  const username = normalizeUsername(body.username);
+  if (!username || !validPassword(body.password)) {
+    return secureJson({ message: "管理者名と12文字以上のパスワードを入力してください。" }, 400);
   }
 
-  const [record1, record2] = await Promise.all([
-    createPasswordRecord(body.password1, env.AUTH_PEPPER),
-    createPasswordRecord(body.password2, env.AUTH_PEPPER),
-  ]);
+  const record = await createPasswordRecord(body.password, env.AUTH_PEPPER);
   const now = new Date().toISOString();
-  await env.ANALYTICS_DB.batch([
-    insertAdmin(env, username1, record1, now),
-    insertAdmin(env, username2, record2, now),
-  ]);
-  return secureJson({ message: "管理者2名を登録しました。セットアップ用Secretを削除してください。" });
+  await insertAdmin(env, username, record, now).run();
+  return secureJson({ message: "最初の管理者を登録しました。ログイン後に2人目を追加してください。" });
 }
 
 function insertAdmin(env, username, record, now) {
@@ -219,6 +214,32 @@ async function admins(env) {
   return secureJson({ admins: (result.results || []).map((user) => ({
     id: user.id, username: user.username, active: Boolean(user.active), lastLoginAt: user.last_login_at,
   })) });
+}
+
+async function createAdmin(request, env) {
+  const existing = await env.ANALYTICS_DB.prepare("SELECT COUNT(*) AS count FROM admin_users").first();
+  if (Number(existing?.count || 0) >= 2) {
+    return secureJson({ message: "管理者は2名までです。" }, 409);
+  }
+
+  const body = await readJson(request);
+  const username = normalizeUsername(body?.username);
+  if (!username || !validPassword(body?.password)) {
+    return secureJson({ message: "管理者名と12文字以上のパスワードを入力してください。" }, 400);
+  }
+
+  const duplicate = await env.ANALYTICS_DB.prepare("SELECT id FROM admin_users WHERE username = ?").bind(username).first();
+  if (duplicate) return secureJson({ message: "この管理者名はすでに使用されています。" }, 409);
+
+  const record = await createPasswordRecord(body.password, env.AUTH_PEPPER);
+  const now = new Date().toISOString();
+  try {
+    await insertAdmin(env, username, record, now).run();
+  } catch (error) {
+    console.error(JSON.stringify({ event: "admin_create_failed", message: error.message }));
+    return secureJson({ message: "管理者を追加できませんでした。登録人数と管理者名を確認してください。" }, 409);
+  }
+  return secureJson({ message: "2人目の管理者を追加しました。" }, 201);
 }
 
 async function updateAdminStatus(request, env, session) {
@@ -326,3 +347,4 @@ function secureResponse(body, status, contentType, extraHeaders = {}) {
   });
   return new Response(body, { status, headers });
 }
+
