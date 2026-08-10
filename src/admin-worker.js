@@ -52,14 +52,84 @@ export default {
   },
 
   async scheduled(_controller, env, ctx) {
-    const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const cutoff = detailCutoffIso();
     const now = new Date().toISOString();
-    ctx.waitUntil(env.ANALYTICS_DB.batch([
-      env.ANALYTICS_DB.prepare("DELETE FROM analytics_sessions WHERE started_at < ?").bind(cutoff),
-      env.ANALYTICS_DB.prepare("DELETE FROM admin_sessions WHERE expires_at <= ?").bind(now),
-    ]));
+    ctx.waitUntil(env.ANALYTICS_DB.batch(archiveStatements(env, cutoff, now)));
   },
 };
+
+export function archiveStatements(env, cutoff, now) {
+  return [
+    env.ANALYTICS_DB.prepare(`
+      INSERT INTO analytics_daily (day, visitors, visits, active_seconds_total, active_sessions, answers)
+      SELECT date(started_at, '+9 hours'), COUNT(DISTINCT visitor_id), COUNT(*),
+        COALESCE(SUM(active_seconds), 0), SUM(CASE WHEN active_seconds > 0 THEN 1 ELSE 0 END),
+        COALESCE(SUM(answers_count), 0)
+      FROM analytics_sessions WHERE started_at < ? GROUP BY date(started_at, '+9 hours')
+      ON CONFLICT(day) DO UPDATE SET
+        visitors = analytics_daily.visitors + excluded.visitors,
+        visits = analytics_daily.visits + excluded.visits,
+        active_seconds_total = analytics_daily.active_seconds_total + excluded.active_seconds_total,
+        active_sessions = analytics_daily.active_sessions + excluded.active_sessions,
+        answers = analytics_daily.answers + excluded.answers
+    `).bind(cutoff),
+    env.ANALYTICS_DB.prepare(`
+      INSERT INTO analytics_daily (day, started)
+      SELECT date(answer_started_at, '+9 hours'), COUNT(DISTINCT visitor_id)
+      FROM analytics_sessions WHERE started_at < ? AND answer_started_at IS NOT NULL
+      GROUP BY date(answer_started_at, '+9 hours')
+      ON CONFLICT(day) DO UPDATE SET started = analytics_daily.started + excluded.started
+    `).bind(cutoff),
+    env.ANALYTICS_DB.prepare(`
+      INSERT INTO analytics_daily (day, completed)
+      SELECT date(completed_at, '+9 hours'), COUNT(DISTINCT visitor_id)
+      FROM analytics_sessions WHERE started_at < ? AND completed_at IS NOT NULL
+      GROUP BY date(completed_at, '+9 hours')
+      ON CONFLICT(day) DO UPDATE SET completed = analytics_daily.completed + excluded.completed
+    `).bind(cutoff),
+    env.ANALYTICS_DB.prepare(`
+      INSERT INTO analytics_daily (day, result_views)
+      SELECT date(result_viewed_at, '+9 hours'), COUNT(DISTINCT visitor_id)
+      FROM analytics_sessions WHERE started_at < ? AND result_viewed_at IS NOT NULL
+      GROUP BY date(result_viewed_at, '+9 hours')
+      ON CONFLICT(day) DO UPDATE SET result_views = analytics_daily.result_views + excluded.result_views
+    `).bind(cutoff),
+    env.ANALYTICS_DB.prepare(`
+      INSERT INTO analytics_daily (day, note_clicks)
+      SELECT date(note_clicked_at, '+9 hours'), COUNT(DISTINCT visitor_id)
+      FROM analytics_sessions WHERE started_at < ? AND note_clicked_at IS NOT NULL
+      GROUP BY date(note_clicked_at, '+9 hours')
+      ON CONFLICT(day) DO UPDATE SET note_clicks = analytics_daily.note_clicks + excluded.note_clicks
+    `).bind(cutoff),
+    env.ANALYTICS_DB.prepare(`
+      INSERT INTO analytics_daily_types (day, type, completed)
+      SELECT date(completed_at, '+9 hours'), result_type, COUNT(*)
+      FROM analytics_sessions
+      WHERE started_at < ? AND completed_at IS NOT NULL AND result_type IS NOT NULL
+      GROUP BY date(completed_at, '+9 hours'), result_type
+      ON CONFLICT(day, type) DO UPDATE SET completed = analytics_daily_types.completed + excluded.completed
+    `).bind(cutoff),
+    env.ANALYTICS_DB.prepare(`
+      INSERT INTO analytics_daily_types (day, type, note_clicks)
+      SELECT date(note_clicked_at, '+9 hours'), note_type, COUNT(*)
+      FROM analytics_sessions
+      WHERE started_at < ? AND note_clicked_at IS NOT NULL AND note_type IS NOT NULL
+      GROUP BY date(note_clicked_at, '+9 hours'), note_type
+      ON CONFLICT(day, type) DO UPDATE SET note_clicks = analytics_daily_types.note_clicks + excluded.note_clicks
+    `).bind(cutoff),
+    env.ANALYTICS_DB.prepare("DELETE FROM analytics_sessions WHERE started_at < ?").bind(cutoff),
+    env.ANALYTICS_DB.prepare("DELETE FROM admin_sessions WHERE expires_at <= ?").bind(now),
+  ];
+}
+
+export function detailCutoffIso(now = new Date()) {
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(now);
+  const cutoff = new Date(`${today}T00:00:00Z`);
+  cutoff.setUTCDate(cutoff.getUTCDate() - 89);
+  return new Date(`${cutoff.toISOString().slice(0, 10)}T00:00:00+09:00`).toISOString();
+}
 
 async function handleApi(request, env, basePath) {
   const url = new URL(request.url);
@@ -159,11 +229,23 @@ function insertAdmin(env, username, record, now) {
 }
 
 async function metrics(url, env) {
-  const range = normalizeDateRange(url.searchParams);
+  let earliestDate = null;
+  if (url.searchParams.get("range") === "all") {
+    const earliest = await env.ANALYTICS_DB.prepare(`
+      SELECT MIN(day) AS day FROM (
+        SELECT day FROM analytics_daily
+        UNION ALL
+        SELECT date(started_at, '+9 hours') AS day FROM analytics_sessions
+      )
+    `).first();
+    earliestDate = earliest?.day || null;
+  }
+  const range = normalizeDateRange(url.searchParams, new Date(), earliestDate);
   const { startIso, endIso } = japanDateBounds(range);
   const statements = [
     env.ANALYTICS_DB.prepare(`SELECT COUNT(DISTINCT visitor_id) AS visitors, COUNT(*) AS visits,
-      COALESCE(ROUND(AVG(CASE WHEN active_seconds > 0 THEN active_seconds END)), 0) AS average_seconds,
+      COALESCE(SUM(active_seconds), 0) AS active_seconds_total,
+      COUNT(CASE WHEN active_seconds > 0 THEN 1 END) AS active_sessions,
       COALESCE(SUM(answers_count), 0) AS answers
       FROM analytics_sessions WHERE started_at >= ? AND started_at < ?`).bind(startIso, endIso),
     env.ANALYTICS_DB.prepare(`SELECT
@@ -183,17 +265,34 @@ async function metrics(url, env) {
       FROM analytics_sessions WHERE completed_at >= ? AND completed_at < ? AND result_type IS NOT NULL GROUP BY result_type`).bind(startIso, endIso),
     env.ANALYTICS_DB.prepare(`SELECT note_type AS type, COUNT(*) AS note_clicks
       FROM analytics_sessions WHERE note_clicked_at >= ? AND note_clicked_at < ? AND note_type IS NOT NULL GROUP BY note_type`).bind(startIso, endIso),
+    env.ANALYTICS_DB.prepare(`SELECT day, visitors, visits, active_seconds_total, active_sessions,
+      answers, started, completed, result_views, note_clicks
+      FROM analytics_daily WHERE day >= ? AND day <= ? ORDER BY day`).bind(range.startDate, range.endDate),
+    env.ANALYTICS_DB.prepare(`SELECT type, COALESCE(SUM(completed), 0) AS completed,
+      COALESCE(SUM(note_clicks), 0) AS note_clicks
+      FROM analytics_daily_types WHERE day >= ? AND day <= ? GROUP BY type`).bind(range.startDate, range.endDate),
   ];
   const results = await env.ANALYTICS_DB.batch(statements);
   const visits = results[0].results?.[0] || {};
   const funnel = results[1].results?.[0] || {};
-  const started = Number(funnel.started || 0);
-  const completed = Number(funnel.completed || 0);
-  const resultViews = Number(funnel.result_views || 0);
-  const noteClicks = Number(funnel.note_clicks || 0);
+  const archivedDaily = results[7].results || [];
+  const archived = archivedDaily.reduce((total, row) => {
+    for (const key of ["visitors", "visits", "active_seconds_total", "active_sessions", "answers", "started", "completed", "result_views", "note_clicks"]) {
+      total[key] += Number(row[key] || 0);
+    }
+    return total;
+  }, { visitors: 0, visits: 0, active_seconds_total: 0, active_sessions: 0, answers: 0, started: 0, completed: 0, result_views: 0, note_clicks: 0 });
+  const activeSeconds = Number(visits.active_seconds_total || 0) + archived.active_seconds_total;
+  const activeSessions = Number(visits.active_sessions || 0) + archived.active_sessions;
+  const started = Number(funnel.started || 0) + archived.started;
+  const completed = Number(funnel.completed || 0) + archived.completed;
+  const resultViews = Number(funnel.result_views || 0) + archived.result_views;
+  const noteClicks = Number(funnel.note_clicks || 0) + archived.note_clicks;
   const summary = {
-    visitors: Number(visits.visitors || 0), visits: Number(visits.visits || 0),
-    averageSeconds: Number(visits.average_seconds || 0), answers: Number(visits.answers || 0),
+    visitors: Number(visits.visitors || 0) + archived.visitors,
+    visits: Number(visits.visits || 0) + archived.visits,
+    averageSeconds: activeSessions ? Math.round(activeSeconds / activeSessions) : 0,
+    answers: Number(visits.answers || 0) + archived.answers,
     started, completed, resultViews, noteClicks,
     completionRate: started ? roundPercent(completed / started) : 0,
     noteClickRate: resultViews ? roundPercent(noteClicks / resultViews) : 0,
@@ -201,8 +300,8 @@ async function metrics(url, env) {
   return secureJson({
     range,
     summary,
-    daily: mergeDaily(range, results[2].results || [], results[3].results || [], results[4].results || []),
-    types: mergeTypes(results[5].results || [], results[6].results || []),
+    daily: mergeDaily(range, results[2].results || [], results[3].results || [], results[4].results || [], archivedDaily),
+    types: mergeTypes(results[5].results || [], results[6].results || [], results[8].results || []),
     generatedAt: new Date().toISOString(),
   });
 }
@@ -278,21 +377,33 @@ async function changePassword(request, env, session) {
   return secureJson({ message: "パスワードを変更しました。" });
 }
 
-function mergeDaily(range, visits, completions, notes) {
+function mergeDaily(range, visits, completions, notes, archivedRows) {
   const byDay = new Map();
-  for (const day of enumerateDays(range.startDate, range.endDate, 120)) {
+  for (const day of enumerateDays(range.startDate, range.endDate, 20_000)) {
     byDay.set(day, { day, visitors: 0, visits: 0, answers: 0, completed: 0, noteClicks: 0 });
   }
-  for (const row of visits) Object.assign(byDay.get(row.day) || {}, { visitors: Number(row.visitors), visits: Number(row.visits), answers: Number(row.answers) });
-  for (const row of completions) if (byDay.has(row.day)) byDay.get(row.day).completed = Number(row.completed);
-  for (const row of notes) if (byDay.has(row.day)) byDay.get(row.day).noteClicks = Number(row.note_clicks);
+  for (const row of archivedRows) if (byDay.has(row.day)) Object.assign(byDay.get(row.day), {
+    visitors: Number(row.visitors || 0), visits: Number(row.visits || 0), answers: Number(row.answers || 0),
+    completed: Number(row.completed || 0), noteClicks: Number(row.note_clicks || 0),
+  });
+  for (const row of visits) if (byDay.has(row.day)) {
+    byDay.get(row.day).visitors += Number(row.visitors || 0);
+    byDay.get(row.day).visits += Number(row.visits || 0);
+    byDay.get(row.day).answers += Number(row.answers || 0);
+  }
+  for (const row of completions) if (byDay.has(row.day)) byDay.get(row.day).completed += Number(row.completed || 0);
+  for (const row of notes) if (byDay.has(row.day)) byDay.get(row.day).noteClicks += Number(row.note_clicks || 0);
   return [...byDay.values()];
 }
 
-function mergeTypes(completedRows, noteRows) {
+function mergeTypes(completedRows, noteRows, archivedRows) {
   const map = new Map([...TYPE_CODES].sort().map((type) => [type, { type, completed: 0, noteClicks: 0 }]));
-  for (const row of completedRows) if (map.has(row.type)) map.get(row.type).completed = Number(row.completed);
-  for (const row of noteRows) if (map.has(row.type)) map.get(row.type).noteClicks = Number(row.note_clicks);
+  for (const row of archivedRows) if (map.has(row.type)) {
+    map.get(row.type).completed = Number(row.completed || 0);
+    map.get(row.type).noteClicks = Number(row.note_clicks || 0);
+  }
+  for (const row of completedRows) if (map.has(row.type)) map.get(row.type).completed += Number(row.completed || 0);
+  for (const row of noteRows) if (map.has(row.type)) map.get(row.type).noteClicks += Number(row.note_clicks || 0);
   return [...map.values()];
 }
 
