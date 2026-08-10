@@ -8,10 +8,17 @@
   },
   "scripts": {
     "dev": "wrangler dev",
+    "dev:admin": "wrangler dev --config wrangler.admin.jsonc",
     "build": "node scripts/build.mjs",
+    "build:admin": "node scripts/verify-admin.mjs",
+    "preview:admin": "node scripts/preview-admin.mjs",
     "deploy": "wrangler deploy",
+    "deploy:admin": "wrangler deploy --config wrangler.admin.jsonc",
     "start": "wrangler dev",
-    "test": "pnpm run build",
+    "test": "node --test",
+    "check": "pnpm run build && pnpm run build:admin && pnpm run test",
+    "db:migrate:local": "wrangler d1 migrations apply type-navi-analytics --local",
+    "db:migrate:remote": "wrangler d1 migrations apply type-navi-analytics --remote",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"
   },
