@@ -76,6 +76,24 @@ test("detail retention keeps 90 Japan calendar days", () => {
   assert.equal(detailCutoffIso(new Date("2026-08-11T03:00:00+09:00")), "2026-05-13T15:00:00.000Z");
 });
 
+test("diagnosis questions use balanced five-point statements", () => {
+  const questions = JSON.parse(readFileSync(new URL("../site/data/questions.json", import.meta.url), "utf8"));
+  assert.equal(questions.length, 30);
+  assert.deepEqual(questions.reduce((counts, question) => {
+    counts[question.axis] = (counts[question.axis] || 0) + 1;
+    assert.equal(question.axis.includes(question.positive), true);
+    assert.equal(typeof question.text, "string");
+    assert.equal(question.text.length > 10, true);
+    return counts;
+  }, {}), { EI: 7, SN: 7, TF: 7, JP: 9 });
+
+  const diagnosisSource = readFileSync(new URL("../site/js/diagnosis.js", import.meta.url), "utf8");
+  for (const label of ["そう思わない", "どちらかと言えばそう思わない", "どちらでもない", "どちらかと言えばそう思う", "そう思う"]) {
+    assert.match(diagnosisSource, new RegExp(label));
+  }
+  assert.match(diagnosisSource, /CHOICE_SCORES = \[-2, -1, 0, 1, 2\]/);
+});
+
 test("password records verify only the correct password and pepper", async () => {
   const record = await createPasswordRecord("correct-horse-battery-staple", "test-pepper");
   assert.equal(record.iterations, 100_000);
