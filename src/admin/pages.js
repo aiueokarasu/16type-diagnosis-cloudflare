@@ -118,7 +118,7 @@ export function dashboardPage(nonce) {
           <article class="panel"><p class="eyebrow">PASSWORD</p><h2>パスワード変更</h2><form id="password-form" class="form-stack compact"><label>現在のパスワード<input name="currentPassword" type="password" autocomplete="current-password" required></label><label>新しいパスワード<input name="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><button class="primary-button">変更する</button></form><p id="password-message" class="message"></p></article>
         </section>
 
-        <section class="panel data-info"><div><b>データ保存期間</b><span>90日</span></div><div><b>集計対象外</b><span>プレビュー・localhost・管理者除外ブラウザ</span></div><div><b>個人情報</b><span>IP・氏名・メールアドレスは保存しません</span></div></section>
+        <section class="panel data-info"><div><b>データ保存期間</b><span>詳細90日・日別集計は無期限</span></div><div><b>集計対象外</b><span>プレビュー・localhost・管理者除外ブラウザ</span></div><div><b>個人情報</b><span>IP・氏名・メールアドレスは保存しません</span></div></section>
       </main>`,
     script: dashboardScript(),
   });
