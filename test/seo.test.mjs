@@ -16,6 +16,10 @@ test("build generates a crawlable guide for all 16 types", () => {
     assert.match(html, /application\/ld\+json/);
     assert.match(html, new RegExp(TYPE_GUIDES[type].label));
     assert.match(html, new RegExp(TYPE_GUIDES[type].everyday.slice(0, 20)));
+    assert.match(html, new RegExp(TYPE_GUIDES[type].strengths.slice(0, 20)));
+    assert.match(html, new RegExp(TYPE_GUIDES[type].stress.slice(0, 20)));
+    assert.ok(TYPE_GUIDES[type].strengths.length >= 90);
+    assert.ok(TYPE_GUIDES[type].stress.length >= 90);
   }
 });
 
