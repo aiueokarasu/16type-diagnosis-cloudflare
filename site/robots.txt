@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /diagnosis.html
+Disallow: /result.html
+Disallow: /api/
+
+Sitemap: https://16type-diagnosis.type-navi-jp.workers.dev/sitemap.xml
