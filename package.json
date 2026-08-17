@@ -15,7 +15,7 @@
     "deploy": "wrangler deploy",
     "deploy:admin": "wrangler deploy --config wrangler.admin.jsonc",
     "start": "wrangler dev",
-    "test": "node --test test/analytics-core.test.mjs",
+    "test": "node --test test/analytics-core.test.mjs test/seo.test.mjs",
     "check": "pnpm run build && pnpm run build:admin && pnpm run test",
     "db:migrate:local": "wrangler d1 migrations apply type-navi-analytics --local",
     "db:migrate:remote": "wrangler d1 migrations apply type-navi-analytics --remote",
