@@ -76,8 +76,10 @@ function typeGuideHtml(type) {
         <img src="${cover}" alt="${type}（${escapeHtml(guide.label)}）のイメージ" width="1200" height="630">
       </header>
       <section class="type-guide-section"><h2>${type}の日常に表れやすい特徴</h2><p>${escapeHtml(guide.everyday)}</p></section>
+      <section class="type-guide-section"><h2>${type}の強みと活かし方</h2><p>${escapeHtml(guide.strengths)}</p></section>
       <section class="type-guide-section"><h2>${type}の人間関係と恋愛</h2><p>${escapeHtml(guide.relationships)}</p></section>
       <section class="type-guide-section"><h2>${type}の仕事で活きる力</h2><p>${escapeHtml(guide.work)}</p><ul class="type-guide-tags">${personality.jobs.map((job) => `<li>${escapeHtml(job)}</li>`).join("")}</ul></section>
+      <section class="type-guide-section"><h2>${type}が疲れやストレスを感じたとき</h2><p>${escapeHtml(guide.stress)}</p></section>
       <section class="type-guide-section"><h2>${type}が自分らしく成長するヒント</h2><p>${escapeHtml(guide.growth)}</p></section>
       <aside class="type-guide-note"><p>この解説は自己理解のための一般的な傾向です。人の性格を断定するものや、医学的な診断ではありません。</p></aside>
     </article>
