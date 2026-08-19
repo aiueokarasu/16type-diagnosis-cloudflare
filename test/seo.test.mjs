@@ -41,3 +41,12 @@ test("robots and personalized pages use the intended indexing policy", () => {
   assert.match(result, /name="robots" content="noindex,follow"/);
   assert.match(diagnosis, /name="robots" content="noindex"/);
 });
+
+test("landing page exposes a large social sharing image", () => {
+  const landing = readFileSync(new URL("../dist/index.html", import.meta.url), "utf8");
+  assert.match(landing, /property="og:image" content="https:\/\/16type-diagnosis\.type-navi-jp\.workers\.dev\/img\/og-image\.png"/);
+  assert.match(landing, /property="og:image:width" content="1200"/);
+  assert.match(landing, /property="og:image:height" content="630"/);
+  assert.match(landing, /name="twitter:card" content="summary_large_image"/);
+  assert.match(landing, /name="twitter:image" content="https:\/\/16type-diagnosis\.type-navi-jp\.workers\.dev\/img\/og-image\.png"/);
+});
