@@ -38,20 +38,31 @@ function typeGuideHtml(type) {
   if (!guide || !personality) throw new Error(`Missing SEO guide data for ${type}`);
 
   const canonical = `${siteOrigin}/types/${type.toLowerCase()}/`;
-  const description = `${type}（${guide.label}）の性格を、日常、人間関係、恋愛、仕事、成長のヒントから詳しく解説します。`;
+  const description = `${type}（${guide.label}）の性格とは？${guide.lead.split("。")[0]}。日常・恋愛・仕事・ストレス時の傾向と、自分らしく過ごすヒントを紹介します。`;
   const cover = coverUrl(type);
-  const related = TYPE_ORDER.filter((candidate) => candidate !== type)
-    .slice(TYPE_ORDER.indexOf(type) % 4, TYPE_ORDER.indexOf(type) % 4 + 4)
-    .slice(0, 3);
+  const related = [...new Set([...personality.best, personality.friend])].filter((candidate) => candidate !== type).slice(0, 3);
   const structuredData = JSON.stringify({
     "@context": "https://schema.org",
-    "@type": "Article",
-    headline: `${type}（${guide.label}）の性格・恋愛・仕事`,
-    description,
-    inLanguage: "ja",
-    mainEntityOfPage: canonical,
-    image: cover,
-    publisher: { "@type": "Organization", name: "16タイプ診断" },
+    "@graph": [
+      {
+        "@type": "Article",
+        headline: `${type}（${guide.label}）の性格・恋愛・仕事`,
+        description,
+        inLanguage: "ja",
+        mainEntityOfPage: canonical,
+        image: cover,
+        author: { "@type": "Organization", name: "16タイプ診断", url: `${siteOrigin}/about/` },
+        publisher: { "@type": "Organization", name: "16タイプ診断", url: siteOrigin },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "ホーム", item: `${siteOrigin}/` },
+          { "@type": "ListItem", position: 2, name: "16タイプ性格ガイド", item: `${siteOrigin}/types/` },
+          { "@type": "ListItem", position: 3, name: `${type}（${guide.label}）`, item: canonical },
+        ],
+      },
+    ],
   }).replaceAll("<", "\\u003c");
 
   return `<!doctype html>
@@ -63,9 +74,11 @@ function typeGuideHtml(type) {
   <meta property="og:type" content="article"><meta property="og:locale" content="ja_JP">
   <meta property="og:site_name" content="16タイプ診断"><meta property="og:title" content="${type}（${escapeHtml(guide.label)}）の性格・恋愛・仕事">
   <meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${canonical}">
-  <meta property="og:image" content="${cover}"><meta name="twitter:card" content="summary_large_image">
+  <meta property="og:image" content="${cover}"><meta property="og:image:alt" content="${type}（${escapeHtml(guide.label)}）の性格ガイド">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${type}（${escapeHtml(guide.label)}）の性格・恋愛・仕事">
+  <meta name="twitter:description" content="${escapeHtml(description)}"><meta name="twitter:image" content="${cover}">
   <script type="application/ld+json">${structuredData}</script>
-  <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/type-guide.css"><link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/type-guide.css"><link rel="stylesheet" href="/css/seo-content.css"><link rel="stylesheet" href="/css/responsive.css">
 </head><body>
   <header class="site-header"><a class="brand" href="/">16<span>TYPE</span></a><button class="theme-toggle" type="button" aria-label="テーマを切り替える">☾</button></header>
   <main class="container type-guide-main">
@@ -75,18 +88,21 @@ function typeGuideHtml(type) {
         <div><p class="eyebrow">16 TYPE GUIDE</p><p class="type-guide-code">${type}</p><h1>${escapeHtml(guide.label)}</h1><p class="type-guide-lead">${escapeHtml(guide.lead)}</p></div>
         <img src="${cover}" alt="${type}（${escapeHtml(guide.label)}）のイメージ" width="1200" height="630">
       </header>
-      <section class="type-guide-section"><h2>${type}の日常に表れやすい特徴</h2><p>${escapeHtml(guide.everyday)}</p></section>
-      <section class="type-guide-section"><h2>${type}の強みと活かし方</h2><p>${escapeHtml(guide.strengths)}</p></section>
-      <section class="type-guide-section"><h2>${type}の人間関係と恋愛</h2><p>${escapeHtml(guide.relationships)}</p></section>
-      <section class="type-guide-section"><h2>${type}の仕事で活きる力</h2><p>${escapeHtml(guide.work)}</p><ul class="type-guide-tags">${personality.jobs.map((job) => `<li>${escapeHtml(job)}</li>`).join("")}</ul></section>
-      <section class="type-guide-section"><h2>${type}が疲れやストレスを感じたとき</h2><p>${escapeHtml(guide.stress)}</p></section>
-      <section class="type-guide-section"><h2>${type}が自分らしく成長するヒント</h2><p>${escapeHtml(guide.growth)}</p></section>
-      <aside class="type-guide-note"><p>この解説は自己理解のための一般的な傾向です。人の性格を断定するものや、医学的な診断ではありません。</p></aside>
+      <nav class="type-guide-toc" aria-label="このページの目次"><strong>このページで分かること</strong><div><a href="#everyday">日常</a><a href="#strengths">強み</a><a href="#relationships">恋愛・人間関係</a><a href="#communication">会話</a><a href="#work">仕事</a><a href="#stress">ストレス</a><a href="#decisions">迷ったとき</a><a href="#growth">成長</a></div></nav>
+      <section class="type-guide-section" id="everyday"><h2>${type}の日常に表れやすい特徴</h2><p>${escapeHtml(guide.everyday)}</p></section>
+      <section class="type-guide-section" id="strengths"><h2>${type}の強みと活かし方</h2><p>${escapeHtml(guide.strengths)}</p></section>
+      <section class="type-guide-section" id="relationships"><h2>${type}の人間関係と恋愛</h2><p>${escapeHtml(guide.relationships)}</p></section>
+      <section class="type-guide-section" id="communication"><h2>${type}のコミュニケーションのコツ</h2><p>${escapeHtml(guide.communication)}</p></section>
+      <section class="type-guide-section" id="work"><h2>${type}の仕事で活きる力</h2><p>${escapeHtml(guide.work)}</p><ul class="type-guide-tags">${personality.jobs.map((job) => `<li>${escapeHtml(job)}</li>`).join("")}</ul></section>
+      <section class="type-guide-section" id="stress"><h2>${type}が疲れやストレスを感じたとき</h2><p>${escapeHtml(guide.stress)}</p></section>
+      <section class="type-guide-section" id="decisions"><h2>${type}が選択に迷ったときの考え方</h2><p>${escapeHtml(guide.decisions)}</p></section>
+      <section class="type-guide-section" id="growth"><h2>${type}が自分らしく成長するヒント</h2><p>${escapeHtml(guide.growth)}</p></section>
+      <aside class="type-guide-note"><p>この解説は自己理解のための一般的な傾向です。人の性格を断定するものや、医学的な診断ではありません。<a href="/about/">このサイトの考え方と情報の扱い</a>もご確認ください。</p></aside>
     </article>
     <section class="type-guide-cta"><p>自分のタイプがまだ分からない方へ</p><h2>約30問の無料診断を試す</h2><a class="button primary large" href="/diagnosis.html">診断を始める <span>→</span></a></section>
-    <section class="related-types"><h2>ほかのタイプも見る</h2><div>${related.map(typeCard).join("")}</div><a class="text-link" href="/types/">16タイプをすべて見る</a></section>
+    <section class="related-types"><h2>あわせて読みたいタイプ</h2><p>考え方の違いや共通点を知るために、ほかのタイプのページも見比べてみましょう。</p><div>${related.map(typeCard).join("")}</div><a class="text-link" href="/types/">16タイプをすべて見る</a></section>
   </main>
-  <footer>© 16 TYPE DIAGNOSIS</footer><script src="/js/theme.js"></script>
+  ${siteFooter()}<script src="/js/theme.js"></script>
 </body></html>`;
 }
 
@@ -109,16 +125,17 @@ function typeIndexHtml() {
   <meta name="description" content="${description}"><link rel="canonical" href="${canonical}">
   <meta property="og:type" content="website"><meta property="og:locale" content="ja_JP"><meta property="og:site_name" content="16タイプ診断">
   <meta property="og:title" content="16タイプ性格ガイド一覧"><meta property="og:description" content="${description}"><meta property="og:url" content="${canonical}">
-  <meta name="twitter:card" content="summary"><script type="application/ld+json">${structuredData}</script>
-  <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/type-guide.css"><link rel="stylesheet" href="/css/responsive.css">
+  <meta property="og:image" content="${siteOrigin}/img/og-image.png"><meta property="og:image:alt" content="16タイプ診断の性格ガイド一覧">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="16タイプ性格ガイド一覧｜恋愛・仕事・人間関係"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${siteOrigin}/img/og-image.png"><script type="application/ld+json">${structuredData}</script>
+  <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/type-guide.css"><link rel="stylesheet" href="/css/seo-content.css"><link rel="stylesheet" href="/css/responsive.css">
 </head><body>
   <header class="site-header"><a class="brand" href="/">16<span>TYPE</span></a><button class="theme-toggle" type="button" aria-label="テーマを切り替える">☾</button></header>
   <main class="container types-index-main"><nav class="breadcrumbs" aria-label="パンくず"><a href="/">ホーム</a><span>›</span><span>16タイプ一覧</span></nav>
     <header class="types-index-hero"><p class="eyebrow">16 TYPE GUIDE</p><h1>16タイプ性格ガイド</h1><p>診断結果とは少し違う視点から、各タイプの日常、人間関係、恋愛、仕事、成長のヒントを紹介します。</p></header>
     <div class="types-directory">${TYPE_ORDER.map(typeCard).join("")}</div>
-    <aside class="type-guide-note"><p>各ページは自己理解のヒントとしてお楽しみください。性格を断定するものや、医学的な診断ではありません。</p></aside>
+    <aside class="type-guide-note"><p>各ページは自己理解のヒントとしてお楽しみください。性格を断定するものや、医学的な診断ではありません。詳しくは<a href="/about/">このサイトについて</a>をご覧ください。</p></aside>
     <section class="type-guide-cta"><p>自分のタイプを調べたい方へ</p><h2>無料の16タイプ診断</h2><a class="button primary large" href="/diagnosis.html">診断を始める <span>→</span></a></section>
-  </main><footer>© 16 TYPE DIAGNOSIS</footer><script src="/js/theme.js"></script>
+  </main>${siteFooter()}<script src="/js/theme.js"></script>
 </body></html>`;
 }
 
@@ -134,8 +151,12 @@ function coverUrl(type) {
 }
 
 function sitemapXml() {
-  const urls = ["/", "/types/", ...TYPE_ORDER.map((type) => `/types/${type.toLowerCase()}/`)];
+  const urls = ["/", "/types/", "/about/", ...TYPE_ORDER.map((type) => `/types/${type.toLowerCase()}/`)];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${siteOrigin}${url}</loc></url>`).join("\n")}\n</urlset>\n`;
+}
+
+function siteFooter() {
+  return `<footer><a href="/types/">16タイプ性格ガイド</a><a href="/about/">このサイトについて</a><span>© 16 TYPE DIAGNOSIS</span></footer>`;
 }
 
 function escapeHtml(value) {
