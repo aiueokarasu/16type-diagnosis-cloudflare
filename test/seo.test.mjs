@@ -48,10 +48,11 @@ test("all type pages have unique search descriptions and meaningful internal lin
 test("sitemap lists only the public landing and guide pages", () => {
   const sitemap = readFileSync(new URL("../dist/sitemap.xml", import.meta.url), "utf8");
   const locations = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]);
-  assert.equal(locations.length, 19);
+  assert.equal(locations.length, 20);
   assert.equal(locations[0], `${origin}/`);
   assert.equal(locations[1], `${origin}/types/`);
-  assert.equal(locations[2], `${origin}/about/`);
+  assert.equal(locations[2], `${origin}/mbti-16type/`);
+  assert.equal(locations[3], `${origin}/about/`);
   assert.equal(locations.includes(`${origin}/diagnosis.html`), false);
   assert.equal(locations.includes(`${origin}/result.html`), false);
 });
@@ -74,6 +75,20 @@ test("trust page explains purpose, limitations, and privacy", () => {
   assert.match(about, /詳細な計測データは90日間保存/);
   assert.match(about, /"@type":"AboutPage"/);
   assert.match(landing, /href="\/about\/"/);
+});
+
+test("MBTI explainer is crawlable, accurate, and connected to the site", () => {
+  const explainer = readFileSync(new URL("../dist/mbti-16type/index.html", import.meta.url), "utf8");
+  const landing = readFileSync(new URL("../dist/index.html", import.meta.url), "utf8");
+  const typeIndex = readFileSync(new URL("../dist/types/index.html", import.meta.url), "utf8");
+  assert.match(explainer, /<title>MBTIとは？無料16タイプ診断との違い｜16タイプ診断<\/title>/);
+  assert.match(explainer, /当サイトは公式MBTI®ではなく/);
+  assert.match(explainer, /https:\/\/www\.mbti\.or\.jp\/what\//);
+  assert.match(explainer, /href="\/diagnosis.html"/);
+  assert.match(explainer, /href="\/types\/"/);
+  assert.match(explainer, /"@type":"BreadcrumbList"/);
+  assert.match(landing, /href="\/mbti-16type\/"/);
+  assert.match(typeIndex, /href="\/mbti-16type\/"/);
 });
 
 test("landing page exposes a large social sharing image", () => {

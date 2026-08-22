@@ -151,12 +151,12 @@ function coverUrl(type) {
 }
 
 function sitemapXml() {
-  const urls = ["/", "/types/", "/about/", ...TYPE_ORDER.map((type) => `/types/${type.toLowerCase()}/`)];
+  const urls = ["/", "/types/", "/mbti-16type/", "/about/", ...TYPE_ORDER.map((type) => `/types/${type.toLowerCase()}/`)];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${siteOrigin}${url}</loc></url>`).join("\n")}\n</urlset>\n`;
 }
 
 function siteFooter() {
-  return `<footer><a href="/types/">16タイプ性格ガイド</a><a href="/about/">このサイトについて</a><span>© 16 TYPE DIAGNOSIS</span></footer>`;
+  return `<footer><a href="/types/">16タイプ性格ガイド</a><a href="/mbti-16type/">MBTIとの違い</a><a href="/about/">このサイトについて</a><span>© 16 TYPE DIAGNOSIS</span></footer>`;
 }
 
 function escapeHtml(value) {
