@@ -2,6 +2,7 @@ import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { TYPE_GUIDES, TYPE_ORDER } from "./type-guides.mjs";
+import { TOPIC_GUIDES } from "./topic-guides.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceDirectory = path.join(projectRoot, "site");
@@ -16,6 +17,7 @@ const personalities = JSON.parse(await readFile(path.join(sourceDirectory, "data
 const coverFiles = new Set(await readdir(path.join(sourceDirectory, "img", "type-covers")));
 
 await generateTypePages();
+await generateTopicGuides();
 await writeFile(path.join(outputDirectory, "sitemap.xml"), sitemapXml(), "utf8");
 
 console.log("Static diagnosis site and SEO type guides generated in dist.");
@@ -106,6 +108,55 @@ function typeGuideHtml(type) {
 </body></html>`;
 }
 
+function topicGuideHtml(guide) {
+  const canonical = `${siteOrigin}/guides/${guide.slug}/`;
+  const articleData = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: guide.title,
+    description: guide.description,
+    url: canonical,
+    inLanguage: "ja",
+    isPartOf: { "@type": "WebSite", name: "16タイプ診断", url: `${siteOrigin}/` },
+  }).replaceAll("<", "\\u003c");
+  const breadcrumbData = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "ホーム", item: `${siteOrigin}/` },
+      { "@type": "ListItem", position: 2, name: guide.shortTitle, item: canonical },
+    ],
+  }).replaceAll("<", "\\u003c");
+  const sections = guide.sections.map((section, index) => `<section class="feature-card type-guide-section" id="section-${index + 1}"><h2>${escapeHtml(section.title)}</h2>${section.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}</section>`).join("");
+  const toc = guide.sections.map((section, index) => `<a href="#section-${index + 1}">${escapeHtml(section.title)}</a>`).join("");
+  const faq = guide.faq.map(([question, answer]) => `<h3>${escapeHtml(question)}</h3><p>${escapeHtml(answer)}</p>`).join("");
+  const otherGuides = TOPIC_GUIDES.filter((item) => item.slug !== guide.slug).map((item) => `<a class="type-directory-card" href="/guides/${item.slug}/"><strong>${escapeHtml(item.shortTitle)}</strong><span>${escapeHtml(item.title)}</span><small>${escapeHtml(item.description)}</small></a>`).join("");
+
+  return `<!doctype html>
+<html lang="ja"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${escapeHtml(guide.title)}｜16タイプ診断</title>
+  <meta name="description" content="${escapeHtml(guide.description)}"><link rel="canonical" href="${canonical}">
+  <meta property="og:type" content="article"><meta property="og:locale" content="ja_JP"><meta property="og:site_name" content="16タイプ診断">
+  <meta property="og:title" content="${escapeHtml(guide.title)}"><meta property="og:description" content="${escapeHtml(guide.description)}"><meta property="og:url" content="${canonical}">
+  <meta property="og:image" content="${siteOrigin}/img/og-image.png"><meta property="og:image:alt" content="${escapeHtml(guide.title)}">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(guide.title)}"><meta name="twitter:description" content="${escapeHtml(guide.description)}"><meta name="twitter:image" content="${siteOrigin}/img/og-image.png">
+  <script type="application/ld+json">${articleData}</script><script type="application/ld+json">${breadcrumbData}</script>
+  <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/type-guide.css"><link rel="stylesheet" href="/css/seo-content.css"><link rel="stylesheet" href="/css/responsive.css">
+</head><body>
+  <header class="site-header"><a class="brand" href="/">16<span>TYPE</span></a><button class="theme-toggle" type="button" aria-label="テーマを切り替える">☾</button></header>
+  <main class="container trust-main"><nav class="breadcrumbs" aria-label="パンくず"><a href="/">ホーム</a><span>›</span><span>${escapeHtml(guide.shortTitle)}</span></nav>
+    <header class="trust-hero"><p class="eyebrow">16 TYPE GUIDE</p><h1>${escapeHtml(guide.title)}</h1><p>${escapeHtml(guide.lead)}</p></header>
+    <nav class="type-guide-toc" aria-label="ページ内メニュー"><strong>このページの内容</strong><div>${toc}</div></nav>
+    ${sections}
+    <section class="feature-card type-guide-section faq-list" id="faq"><h2>よくある質問</h2>${faq}</section>
+    <section class="feature-card type-guide-note"><h2>診断結果の受け取り方</h2><p>このガイドは自己理解や会話のきっかけを目的とした一般的な情報です。16タイプは、人の能力、価値、将来、関係の成功を決めるものではありません。結果だけで重要な判断をせず、実際の経験や本人同士の対話を大切にしてください。</p><p><a class="button primary" href="/diagnosis.html">16タイプ診断を始める</a></p></section>
+    <section class="topic-related"><h2>16タイプごとの解説を見る</h2><p>自分や気になる相手のタイプから、日常、人間関係、恋愛、仕事の特徴を詳しく読めます。</p><div class="types-directory">${TYPE_ORDER.map(typeCard).join("")}</div></section>
+    <section class="topic-guide-links"><h2>ほかのテーマを見る</h2><div class="types-directory">${otherGuides}</div></section>
+  </main>${siteFooter()}<script src="/js/storage.js"></script><script src="/js/analytics.js"></script><script src="/js/theme.js"></script>
+</body></html>`;
+}
+
 function typeIndexHtml() {
   const canonical = `${siteOrigin}/types/`;
   const description = "16タイプそれぞれの性格、日常、人間関係、恋愛、仕事、成長のヒントを一覧から詳しく読めます。";
@@ -151,12 +202,20 @@ function coverUrl(type) {
 }
 
 function sitemapXml() {
-  const urls = ["/", "/types/", "/mbti-16type/", "/about/", ...TYPE_ORDER.map((type) => `/types/${type.toLowerCase()}/`)];
+  const urls = ["/", "/types/", ...TOPIC_GUIDES.map((guide) => `/guides/${guide.slug}/`), "/mbti-16type/", "/about/", ...TYPE_ORDER.map((type) => `/types/${type.toLowerCase()}/`)];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${siteOrigin}${url}</loc></url>`).join("\n")}\n</urlset>\n`;
 }
 
+async function generateTopicGuides() {
+  for (const guide of TOPIC_GUIDES) {
+    const directory = path.join(outputDirectory, "guides", guide.slug);
+    await mkdir(directory, { recursive: true });
+    await writeFile(path.join(directory, "index.html"), topicGuideHtml(guide), "utf8");
+  }
+}
+
 function siteFooter() {
-  return `<footer><a href="/types/">16タイプ性格ガイド</a><a href="/mbti-16type/">MBTIとの違い</a><a href="/about/">このサイトについて</a><span>© 16 TYPE DIAGNOSIS</span></footer>`;
+  return `<footer><a href="/types/">16タイプ性格ガイド</a><a href="/guides/love/">恋愛</a><a href="/guides/work/">仕事</a><a href="/guides/compatibility/">相性</a><a href="/mbti-16type/">MBTIとの違い</a><a href="/about/">このサイトについて</a><span>© 16 TYPE DIAGNOSIS</span></footer>`;
 }
 
 function escapeHtml(value) {

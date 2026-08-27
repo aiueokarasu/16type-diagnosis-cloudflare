@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { TYPE_GUIDES, TYPE_ORDER } from "../scripts/type-guides.mjs";
+import { TOPIC_GUIDES } from "../scripts/topic-guides.mjs";
 
 const origin = "https://16type-diagnosis.type-navi-jp.workers.dev";
 
@@ -48,11 +49,14 @@ test("all type pages have unique search descriptions and meaningful internal lin
 test("sitemap lists only the public landing and guide pages", () => {
   const sitemap = readFileSync(new URL("../dist/sitemap.xml", import.meta.url), "utf8");
   const locations = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]);
-  assert.equal(locations.length, 20);
+  assert.equal(locations.length, 23);
   assert.equal(locations[0], `${origin}/`);
   assert.equal(locations[1], `${origin}/types/`);
-  assert.equal(locations[2], `${origin}/mbti-16type/`);
-  assert.equal(locations[3], `${origin}/about/`);
+  assert.equal(locations[2], `${origin}/guides/love/`);
+  assert.equal(locations[3], `${origin}/guides/work/`);
+  assert.equal(locations[4], `${origin}/guides/compatibility/`);
+  assert.equal(locations[5], `${origin}/mbti-16type/`);
+  assert.equal(locations[6], `${origin}/about/`);
   assert.equal(locations.includes(`${origin}/diagnosis.html`), false);
   assert.equal(locations.includes(`${origin}/result.html`), false);
 });
@@ -64,6 +68,31 @@ test("robots and personalized pages use the intended indexing policy", () => {
   assert.match(robots, /Sitemap: https:\/\/16type-diagnosis\.type-navi-jp\.workers\.dev\/sitemap\.xml/);
   assert.match(result, /name="robots" content="noindex,follow"/);
   assert.match(diagnosis, /name="robots" content="noindex"/);
+});
+
+test("build generates three unique topic guides with useful connections", () => {
+  assert.equal(TOPIC_GUIDES.length, 3);
+  assert.equal(new Set(TOPIC_GUIDES.map((guide) => guide.slug)).size, 3);
+  const descriptions = [];
+  const landing = readFileSync(new URL("../dist/index.html", import.meta.url), "utf8");
+
+  for (const guide of TOPIC_GUIDES) {
+    const html = readFileSync(new URL(`../dist/guides/${guide.slug}/index.html`, import.meta.url), "utf8");
+    assert.match(html, new RegExp(`<title>${guide.title}`));
+    assert.match(html, new RegExp(`${origin}/guides/${guide.slug}/`));
+    assert.match(html, /"@type":"Article"/);
+    assert.match(html, /"@type":"BreadcrumbList"/);
+    assert.match(html, /href="\/diagnosis.html"/);
+    assert.match(html, /class="[^"]*faq-list[^"]*"/);
+    assert.match(html, /能力、価値、将来/);
+    assert.equal((html.match(/class="type-directory-card"/g) ?? []).length, 18);
+    assert.equal(guide.sections.length, 5);
+    assert.equal(guide.faq.length, 3);
+    assert.match(landing, new RegExp(`href="/guides/${guide.slug}/"`));
+    descriptions.push(guide.description);
+  }
+
+  assert.equal(new Set(descriptions).size, 3);
 });
 
 test("trust page explains purpose, limitations, and privacy", () => {
