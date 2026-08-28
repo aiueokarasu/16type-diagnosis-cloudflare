@@ -131,3 +131,8 @@ test("landing page exposes a large social sharing image", () => {
   assert.match(landing, /name="twitter:card" content="summary_large_image"/);
   assert.match(landing, /name="twitter:image" content="https:\/\/16type-diagnosis\.type-navi-jp\.workers\.dev\/img\/og-image\.png"/);
 });
+
+test("result guide call-to-action keeps readable white text", () => {
+  const css = readFileSync(new URL("../dist/css/seo-content.css", import.meta.url), "utf8");
+  assert.match(css, /\.result-reading-actions \.button[^}]*color:#fff/);
+});
