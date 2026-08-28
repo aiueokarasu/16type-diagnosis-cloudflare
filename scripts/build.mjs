@@ -150,7 +150,7 @@ function topicGuideHtml(guide) {
     <nav class="type-guide-toc" aria-label="ページ内メニュー"><strong>このページの内容</strong><div>${toc}</div></nav>
     ${sections}
     <section class="feature-card type-guide-section faq-list" id="faq"><h2>よくある質問</h2>${faq}</section>
-    <section class="feature-card type-guide-note"><h2>診断結果の受け取り方</h2><p>このガイドは自己理解や会話のきっかけを目的とした一般的な情報です。16タイプは、人の能力、価値、将来、関係の成功を決めるものではありません。結果だけで重要な判断をせず、実際の経験や本人同士の対話を大切にしてください。</p><p><a class="button primary" href="/diagnosis.html">16タイプ診断を始める</a></p></section>
+    <section class="type-guide-note result-reading-note" aria-labelledby="result-reading-title"><div class="result-reading-heading"><span class="result-reading-icon" aria-hidden="true">✓</span><div><p class="result-reading-label">結果を見る前に</p><h2 id="result-reading-title">診断結果の受け取り方</h2></div></div><p class="result-reading-text">このガイドは自己理解や会話のきっかけを目的とした一般的な情報です。16タイプは、人の能力、価値、将来、関係の成功を決めるものではありません。結果だけで重要な判断をせず、実際の経験や本人同士の対話を大切にしてください。</p><div class="result-reading-actions"><a class="button primary" href="/diagnosis.html">16タイプ診断を始める <span aria-hidden="true">→</span></a></div></section>
     <section class="topic-related"><h2>16タイプごとの解説を見る</h2><p>自分や気になる相手のタイプから、日常、人間関係、恋愛、仕事の特徴を詳しく読めます。</p><div class="types-directory">${TYPE_ORDER.map(typeCard).join("")}</div></section>
     <section class="topic-guide-links"><h2>ほかのテーマを見る</h2><div class="types-directory">${otherGuides}</div></section>
   </main>${siteFooter()}<script src="/js/storage.js"></script><script src="/js/analytics.js"></script><script src="/js/theme.js"></script>

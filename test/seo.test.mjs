@@ -84,6 +84,9 @@ test("build generates three unique topic guides with useful connections", () => 
     assert.match(html, /"@type":"BreadcrumbList"/);
     assert.match(html, /href="\/diagnosis.html"/);
     assert.match(html, /class="[^"]*faq-list[^"]*"/);
+    assert.match(html, /class="[^"]*result-reading-note[^"]*"/);
+    assert.match(html, /結果を見る前に/);
+    assert.match(html, /aria-labelledby="result-reading-title"/);
     assert.match(html, /能力、価値、将来/);
     assert.equal((html.match(/class="type-directory-card"/g) ?? []).length, 18);
     assert.equal(guide.sections.length, 5);
