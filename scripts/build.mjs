@@ -48,7 +48,7 @@ function typeGuideHtml(type) {
     "@graph": [
       {
         "@type": "Article",
-        headline: `${type}（${guide.label}）の性格・恋愛・仕事`,
+        headline: `${type}（${guide.label}）の性格・恋愛・仕事・相性`,
         description,
         inLanguage: "ja",
         mainEntityOfPage: canonical,
@@ -70,14 +70,14 @@ function typeGuideHtml(type) {
   return `<!doctype html>
 <html lang="ja"><head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>${type}（${escapeHtml(guide.label)}）の性格・恋愛・仕事｜16タイプ診断</title>
+  <title>${type}（${escapeHtml(guide.label)}）の性格・恋愛・仕事・相性｜16タイプ診断</title>
   <meta name="description" content="${escapeHtml(description)}">
   <link rel="canonical" href="${canonical}">
   <meta property="og:type" content="article"><meta property="og:locale" content="ja_JP">
-  <meta property="og:site_name" content="16タイプ診断"><meta property="og:title" content="${type}（${escapeHtml(guide.label)}）の性格・恋愛・仕事">
+  <meta property="og:site_name" content="16タイプ診断"><meta property="og:title" content="${type}（${escapeHtml(guide.label)}）の性格・恋愛・仕事・相性">
   <meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${canonical}">
   <meta property="og:image" content="${cover}"><meta property="og:image:alt" content="${type}（${escapeHtml(guide.label)}）の性格ガイド">
-  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${type}（${escapeHtml(guide.label)}）の性格・恋愛・仕事">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${type}（${escapeHtml(guide.label)}）の性格・恋愛・仕事・相性">
   <meta name="twitter:description" content="${escapeHtml(description)}"><meta name="twitter:image" content="${cover}">
   <script type="application/ld+json">${structuredData}</script>
   <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/type-guide.css"><link rel="stylesheet" href="/css/seo-content.css"><link rel="stylesheet" href="/css/responsive.css">
@@ -102,6 +102,7 @@ function typeGuideHtml(type) {
       <aside class="type-guide-note"><p>この解説は自己理解のための一般的な傾向です。人の性格を断定するものや、医学的な診断ではありません。<a href="/about/">このサイトの考え方と情報の扱い</a>もご確認ください。</p></aside>
     </article>
     <section class="type-guide-cta"><p>自分のタイプがまだ分からない方へ</p><h2>約30問の無料診断を試す</h2><a class="button primary large" href="/diagnosis.html">診断を始める <span>→</span></a></section>
+    <section class="type-topic-links" aria-labelledby="type-topic-links-title"><h2 id="type-topic-links-title">${type}をテーマ別に考える</h2><p>${type}の特徴をヒントに、恋愛・仕事・相性について考えるためのガイドです。</p><div><a href="/guides/love/"><strong>${type}の恋愛傾向を考えるヒント</strong><span>気持ちの伝え方や関係の築き方を見る</span></a><a href="/guides/work/"><strong>${type}の仕事・適職を考えるヒント</strong><span>働きやすさや強みの活かし方を見る</span></a><a href="/guides/compatibility/"><strong>${type}とほかのタイプの相性を考えるヒント</strong><span>違いを理解し、関係を整える考え方を見る</span></a></div></section>
     <section class="related-types"><h2>あわせて読みたいタイプ</h2><p>考え方の違いや共通点を知るために、ほかのタイプのページも見比べてみましょう。</p><div>${related.map(typeCard).join("")}</div><a class="text-link" href="/types/">16タイプをすべて見る</a></section>
   </main>
   ${siteFooter()}<script src="/js/theme.js"></script>

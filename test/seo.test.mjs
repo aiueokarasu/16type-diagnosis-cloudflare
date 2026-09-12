@@ -13,6 +13,7 @@ test("build generates a crawlable guide for all 16 types", () => {
   for (const type of TYPE_ORDER) {
     const html = readFileSync(new URL(`../dist/types/${type.toLowerCase()}/index.html`, import.meta.url), "utf8");
     assert.match(html, new RegExp(`<title>${type}`));
+    assert.match(html, new RegExp(`<title>${type}（[^）]+）の性格・恋愛・仕事・相性｜16タイプ診断</title>`));
     assert.match(html, new RegExp(`${origin}/types/${type.toLowerCase()}/`));
     assert.match(html, /application\/ld\+json/);
     assert.match(html, new RegExp(TYPE_GUIDES[type].label));
@@ -42,6 +43,12 @@ test("all type pages have unique search descriptions and meaningful internal lin
     assert.ok((html.match(/class="type-directory-card"/g) ?? []).length >= 3);
     assert.match(html, /href="\/types\/"/);
     assert.match(html, /href="\/diagnosis.html"/);
+    assert.match(html, /href="\/guides\/love\/"/);
+    assert.match(html, /href="\/guides\/work\/"/);
+    assert.match(html, /href="\/guides\/compatibility\/"/);
+    assert.match(html, new RegExp(`${type}の恋愛傾向を考えるヒント`));
+    assert.match(html, new RegExp(`${type}の仕事・適職を考えるヒント`));
+    assert.match(html, new RegExp(`${type}とほかのタイプの相性を考えるヒント`));
   }
   assert.equal(new Set(descriptions).size, 16);
 });
