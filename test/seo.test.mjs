@@ -5,6 +5,9 @@ import { TYPE_GUIDES, TYPE_ORDER } from "../scripts/type-guides.mjs";
 import { TOPIC_GUIDES } from "../scripts/topic-guides.mjs";
 
 const origin = "https://16type-diagnosis.type-navi-jp.workers.dev";
+const configSource = readFileSync(new URL("../site/js/config.js", import.meta.url), "utf8");
+const noteUrlBlock = configSource.match(/NOTE_URLS:\s*\{([\s\S]*?)\n\s*\}/)?.[1] ?? "";
+const noteUrls = Object.fromEntries([...noteUrlBlock.matchAll(/^\s*([A-Z]{4}):\s*"(https:\/\/note\.com\/[^"\s]+)"/gm)].map((match) => [match[1], match[2]]));
 
 test("build generates a crawlable guide for all 16 types", () => {
   assert.equal(TYPE_ORDER.length, 16);
@@ -49,8 +52,14 @@ test("all type pages have unique search descriptions and meaningful internal lin
     assert.match(html, new RegExp(`${type}の恋愛傾向を考えるヒント`));
     assert.match(html, new RegExp(`${type}の仕事・適職を考えるヒント`));
     assert.match(html, new RegExp(`${type}とほかのタイプの相性を考えるヒント`));
+    assert.match(html, new RegExp(`href="${noteUrls[type]}"`));
+    assert.match(html, /target="_blank" rel="noopener noreferrer"/);
+    assert.match(html, /noteで詳しい解説を読む/);
+    assert.match(html, /一部有料の内容が含まれる場合があります/);
   }
   assert.equal(new Set(descriptions).size, 16);
+  assert.equal(Object.keys(noteUrls).length, 16);
+  assert.equal(new Set(Object.values(noteUrls)).size, 16);
 });
 
 test("sitemap lists only the public landing and guide pages", () => {

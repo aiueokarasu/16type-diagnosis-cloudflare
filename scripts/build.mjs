@@ -14,6 +14,7 @@ await cp(sourceDirectory, outputDirectory, { recursive: true });
 
 const siteOrigin = "https://16type-diagnosis.type-navi-jp.workers.dev";
 const personalities = JSON.parse(await readFile(path.join(sourceDirectory, "data", "personalities.json"), "utf8"));
+const noteUrls = parseNoteUrls(await readFile(path.join(sourceDirectory, "js", "config.js"), "utf8"));
 const coverFiles = new Set(await readdir(path.join(sourceDirectory, "img", "type-covers")));
 
 await generateTypePages();
@@ -38,6 +39,8 @@ function typeGuideHtml(type) {
   const guide = TYPE_GUIDES[type];
   const personality = personalities[type];
   if (!guide || !personality) throw new Error(`Missing SEO guide data for ${type}`);
+  const noteUrl = noteUrls[type];
+  if (!noteUrl) throw new Error(`Missing note URL for ${type}`);
 
   const canonical = `${siteOrigin}/types/${type.toLowerCase()}/`;
   const description = `${type}（${guide.label}）の性格とは？${guide.lead.split("。")[0]}。日常・恋愛・仕事・ストレス時の傾向と、自分らしく過ごすヒントを紹介します。`;
@@ -104,6 +107,7 @@ function typeGuideHtml(type) {
     <section class="type-guide-cta"><p>自分のタイプがまだ分からない方へ</p><h2>約30問の無料診断を試す</h2><a class="button primary large" href="/diagnosis.html">診断を始める <span>→</span></a></section>
     <section class="type-topic-links" aria-labelledby="type-topic-links-title"><h2 id="type-topic-links-title">${type}をテーマ別に考える</h2><p>${type}の特徴をヒントに、恋愛・仕事・相性について考えるためのガイドです。</p><div><a href="/guides/love/"><strong>${type}の恋愛傾向を考えるヒント</strong><span>気持ちの伝え方や関係の築き方を見る</span></a><a href="/guides/work/"><strong>${type}の仕事・適職を考えるヒント</strong><span>働きやすさや強みの活かし方を見る</span></a><a href="/guides/compatibility/"><strong>${type}とほかのタイプの相性を考えるヒント</strong><span>違いを理解し、関係を整える考え方を見る</span></a></div></section>
     <section class="related-types"><h2>あわせて読みたいタイプ</h2><p>考え方の違いや共通点を知るために、ほかのタイプのページも見比べてみましょう。</p><div>${related.map(typeCard).join("")}</div><a class="text-link" href="/types/">16タイプをすべて見る</a></section>
+    <section class="type-note-cta" aria-labelledby="type-note-title"><p class="eyebrow">MORE ABOUT ${type}</p><h2 id="type-note-title">${type}（${escapeHtml(guide.label)}）をさらに詳しく知る</h2><p>恋愛や仕事、人間関係などを掘り下げた対応記事をnoteでご覧いただけます。</p><a class="button primary large" href="${escapeHtml(noteUrl)}" target="_blank" rel="noopener noreferrer">noteで詳しい解説を読む <span aria-hidden="true">→</span></a><small>外部のnoteへ移動します。記事には一部有料の内容が含まれる場合があります。</small></section>
   </main>
   ${siteFooter()}<script src="/js/theme.js"></script>
 </body></html>`;
@@ -205,6 +209,12 @@ function coverUrl(type) {
 function sitemapXml() {
   const urls = ["/", "/types/", ...TOPIC_GUIDES.map((guide) => `/guides/${guide.slug}/`), "/mbti-16type/", "/about/", ...TYPE_ORDER.map((type) => `/types/${type.toLowerCase()}/`)];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${siteOrigin}${url}</loc></url>`).join("\n")}\n</urlset>\n`;
+}
+
+function parseNoteUrls(source) {
+  const block = source.match(/NOTE_URLS:\s*\{([\s\S]*?)\n\s*\}/)?.[1];
+  if (!block) throw new Error("Could not read NOTE_URLS from site/js/config.js");
+  return Object.fromEntries([...block.matchAll(/^\s*([A-Z]{4}):\s*"(https:\/\/note\.com\/[^"\s]+)"/gm)].map((match) => [match[1], match[2]]));
 }
 
 async function generateTopicGuides() {
