@@ -20,6 +20,7 @@ const coverFiles = new Set(await readdir(path.join(sourceDirectory, "img", "type
 await generateTypePages();
 await generateTopicGuides();
 await writeFile(path.join(outputDirectory, "sitemap.xml"), sitemapXml(), "utf8");
+await installGoogleAnalytics();
 
 console.log("Static diagnosis site and SEO type guides generated in dist.");
 
@@ -223,6 +224,24 @@ async function generateTopicGuides() {
     await mkdir(directory, { recursive: true });
     await writeFile(path.join(directory, "index.html"), topicGuideHtml(guide), "utf8");
   }
+}
+
+async function installGoogleAnalytics() {
+  const scriptTag = '<script src="/js/google-analytics.js"></script>';
+  async function visit(directory) {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const target = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        await visit(target);
+      } else if (entry.isFile() && entry.name.endsWith(".html")) {
+        const html = await readFile(target, "utf8");
+        if (html.includes(scriptTag)) continue;
+        if (!html.includes("</head>")) throw new Error(`Cannot install Google Analytics in ${target}: missing </head>`);
+        await writeFile(target, html.replace("</head>", `${scriptTag}</head>`), "utf8");
+      }
+    }
+  }
+  await visit(outputDirectory);
 }
 
 function siteFooter() {

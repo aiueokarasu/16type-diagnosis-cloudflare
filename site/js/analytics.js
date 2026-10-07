@@ -66,12 +66,19 @@
   window.Analytics = {
     answer(answeredCount) {
       send("answer", { answeredCount });
+      window.trackSiteEvent?.("diagnosis_answer", { answered_count: answeredCount });
     },
     complete(type) {
-      once(`complete:${type}`, () => send("complete", { type }));
+      once(`complete:${type}`, () => {
+        send("complete", { type });
+        window.trackSiteEvent?.("diagnosis_complete");
+      });
     },
     resultView(type) {
-      once(`result:${type}`, () => send("result_view", { type }));
+      once(`result:${type}`, () => {
+        send("result_view", { type });
+        window.trackSiteEvent?.("result_view");
+      });
     },
     noteClick(type) {
       once(`note:${type}`, () => send("note_click", { type }));
